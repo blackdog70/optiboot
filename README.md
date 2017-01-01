@@ -45,6 +45,26 @@ For addition installation information, see the [Optiboot AddingOptibootChipsToId
   1. Connect your Arduino to an ISP programmer [[Installing]]
   1. Use the 'Burn Bootloader' item in Arduino.
   1. You can then upload sketches as normal, using the Optiboot board type.
+ 
+## RS485 HALF DUPLEX support
+
+Only for hardware serial.
+PINB1 is used to enable/disable transmission and it is fixed in optiboot.c (not yet an option in Makefile).
+
+## Software reset support
+
+Byte 0 on EEprom is used to recognize software reset, so it is possible to start bootloader directly from arduino apps.
+
+```
+void start_bootoader()
+{
+	EEPROM.write(0, 0); // Set start bootloader
+	wdt_reset();
+	wdt_enable(WDTO_15MS);
+	exit (1);  // loop forever
+}
+```
+The bootloader will start app after a **STK_LEAVE_PROGRAM**
 
 ----
 
