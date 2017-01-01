@@ -1,3 +1,11 @@
+/*
+ * ************    NOTA IMPORTANTE!!!!!     ***************
+ *
+ * NON PREOCCUPARSI DI TUTTI GLI ERRORI SEGNALATI DA ECLIPSE
+ * LA COMPILAZIONE FUNZIONA LO STESSO
+ *
+ */
+
 #define FUNC_READ 1
 #define FUNC_WRITE 1
 /**********************************************************/
@@ -233,17 +241,17 @@
  */
 
 #if !defined(OPTIBOOT_CUSTOMVER)
-#define OPTIBOOT_CUSTOMVER 0
+#define OPTIBOOT_CUSTOMVER 1
 #endif
 
 unsigned const int __attribute__((section(".version"))) 
 optiboot_version = 256*(OPTIBOOT_MAJVER + OPTIBOOT_CUSTOMVER) + OPTIBOOT_MINVER;
 
-
 #include <inttypes.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
+#include <util/delay.h>
 
 /*
  * Note that we use our own version of "boot.h"
@@ -442,6 +450,7 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 #define appstart_vec (0)
 #endif // VIRTUAL_BOOT_PARTITION
 
+uint8_t  EEMEM NonVolatileChar;
 
 /* main program starts here */
 int main(void) {
@@ -483,8 +492,17 @@ int main(void) {
   ch = MCUCSR;
   MCUCSR = 0;
 #endif
-  if (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF)))
+
+  /*
+   * Sebastiano 01/01/2017
+   * Check if flash  byte at address 0 is set to exactly 1, in case and
+   * if no hard/soft reset the app will start.
+   * Otherwise will start the bootloader.
+   */
+  uint8_t start_app = eeprom_read_byte(&NonVolatileChar);
+  if ((start_app==1) && (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF)))) {
       appStart(ch);
+  }
 
 #if LED_START_FLASHES > 0
   // Set up Timer 1 for timeout counter
@@ -505,8 +523,11 @@ int main(void) {
 #endif
 #endif
 
-  // Set up watchdog to trigger after 1s
-  watchdogConfig(WATCHDOG_1S);
+  // Set up watchdog to trigger after 2s
+  watchdogConfig(WATCHDOG_4S);
+
+  // RS485 rx=11, tx=12, en=13
+  DDRB |= _BV(PINB1); // en OUTPUT
 
 #if (LED_START_FLASHES > 0) || defined(LED_DATA_FLASH)
   /* Set LED pin as output */
@@ -525,9 +546,13 @@ int main(void) {
 
   /* Forever loop: exits by causing WDT reset */
   for (;;) {
+	// put RS485 enable low
+	_delay_ms(2);
+	PORTB &= ~_BV(PINB1);
+	_delay_ms(1);
+
     /* get character from UART */
     ch = getch();
-
     if(ch == STK_GET_PARAMETER) {
       unsigned char which = getch();
       verifySpace();
@@ -536,15 +561,15 @@ int main(void) {
        * Note that the references to memory are optimized away.
        */
       if (which == STK_SW_MINOR) {
-	  putch(optiboot_version & 0xFF);
+	  	putch(optiboot_version & 0xFF);
       } else if (which == STK_SW_MAJOR) {
-	  putch(optiboot_version >> 8);
+	  	putch(optiboot_version >> 8);
       } else {
-	/*
-	 * GET PARAMETER returns a generic 0x03 reply for
-         * other parameters - enough to keep Avrdude happy
-	 */
-	putch(0x03);
+	  /*
+	   * GET PARAMETER returns a generic 0x03 reply for
+       * other parameters - enough to keep Avrdude happy
+	   */
+		putch(0x03);
       }
     }
     else if(ch == STK_SET_DEVICE) {
@@ -594,19 +619,19 @@ int main(void) {
 
 #ifdef VIRTUAL_BOOT_PARTITION
 #if FLASHEND > 8192
-/*
- * AVR with 4-byte ISR Vectors and "jmp"
- * WARNING: this works only up to 128KB flash!
- */
+	/*
+	 * AVR with 4-byte ISR Vectors and "jmp"
+	 * WARNING: this works only up to 128KB flash!
+	 */
       if (address == 0) {
-	// This is the reset vector page. We need to live-patch the
-	// code so the bootloader runs first.
-	//
-	// Save jmp targets (for "Verify")
-	rstVect0_sav = buff[rstVect0];
-	rstVect1_sav = buff[rstVect1];
-	saveVect0_sav = buff[saveVect0];
-	saveVect1_sav = buff[saveVect1];
+		// This is the reset vector page. We need to live-patch the
+		// code so the bootloader runs first.
+		//
+		// Save jmp targets (for "Verify")
+		rstVect0_sav = buff[rstVect0];
+		rstVect1_sav = buff[rstVect1];
+		saveVect0_sav = buff[saveVect0];
+		saveVect1_sav = buff[saveVect1];
 
         // Move RESET jmp target to 'save' vector
         buff[saveVect0] = rstVect0_sav;
@@ -619,30 +644,30 @@ int main(void) {
       }
 
 #else
-/*
- * AVR with 2-byte ISR Vectors and rjmp
- */
+	/*
+	 * AVR with 2-byte ISR Vectors and rjmp
+	 */
       if ((uint16_t)(void*)address == rstVect0) {
         // This is the reset vector page. We need to live-patch
         // the code so the bootloader runs first.
         //
         // Move RESET vector to 'save' vector
-	// Save jmp targets (for "Verify")
-	rstVect0_sav = buff[rstVect0];
-	rstVect1_sav = buff[rstVect1];
-	saveVect0_sav = buff[saveVect0];
-	saveVect1_sav = buff[saveVect1];
+		// Save jmp targets (for "Verify")
+		rstVect0_sav = buff[rstVect0];
+		rstVect1_sav = buff[rstVect1];
+		saveVect0_sav = buff[saveVect0];
+		saveVect1_sav = buff[saveVect1];
 
-	// Instruction is a relative jump (rjmp), so recalculate.
-	uint16_t vect=(rstVect0_sav & 0xff) | ((rstVect1_sav & 0x0f)<<8); //calculate 12b displacement
-	vect = (vect-save_vect_num) & 0x0fff; //substract 'save' interrupt position and wrap around 4096
+		// Instruction is a relative jump (rjmp), so recalculate.
+		uint16_t vect=(rstVect0_sav & 0xff) | ((rstVect1_sav & 0x0f)<<8); //calculate 12b displacement
+		vect = (vect-save_vect_num) & 0x0fff; //substract 'save' interrupt position and wrap around 4096
         // Move RESET jmp target to 'save' vector
         buff[saveVect0] = vect & 0xff;
         buff[saveVect1] = (vect >> 8) | 0xc0; //
         // Add rjump to bootloader at RESET vector
         vect = ((uint16_t)main) &0x0fff; //WARNIG: this works as long as 'main' is in first section
         buff[0] = vect & 0xFF; // rjmp 0x1c00 instruction
-	buff[1] = (vect >> 8) | 0xC0;
+		buff[1] = (vect >> 8) | 0xC0;
       }
 #endif // FLASHEND
 #endif // VBP
@@ -662,7 +687,6 @@ int main(void) {
 
       read_mem(desttype, address, length);
     }
-
     /* Get device signature bytes  */
     else if(ch == STK_READ_SIGN) {
       // READ SIGN - return what Avrdude wants to hear
@@ -672,6 +696,9 @@ int main(void) {
       putch(SIGNATURE_2);
     }
     else if (ch == STK_LEAVE_PROGMODE) { /* 'Q' */
+	  // * Sebastiano 01/01/2017: Set start app if programmed ok
+	  eeprom_write_byte (&NonVolatileChar, 1);
+
       // Adaboot no-wait mod
       watchdogConfig(WATCHDOG_16MS);
       verifySpace();
@@ -753,6 +780,7 @@ uint8_t getch(void) {
 #else
   while(!(UART_SRA & _BV(RXC0)))
     ;
+
   if (!(UART_SRA & _BV(FE0))) {
       /*
        * A Framing Error indicates (probably) that something is talking
@@ -809,6 +837,10 @@ void verifySpace() {
     while (1)			      // and busy-loop so that WD causes
       ;				      //  a reset and app start.
   }
+  _delay_ms(10);
+  // put RS485 enable high
+  PORTB |= _BV(PINB1);
+  _delay_ms(1);
   putch(STK_INSYNC);
 }
 
@@ -847,6 +879,7 @@ void appStart(uint8_t rstFlags) {
   __asm__ __volatile__ ("mov r2, %0\n" :: "r" (rstFlags));
 
   watchdogConfig(WATCHDOG_OFF);
+
   // Note that appstart_vec is defined so that this works with either
   // real or virtual boot partitions.
   __asm__ __volatile__ (

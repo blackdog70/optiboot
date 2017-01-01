@@ -70,7 +70,13 @@ LDSECTIONS  = -Wl,--section-start=.text=0x3e00 -Wl,--section-start=.version=0x3f
 fixpath = $(1)
 SH := bash
 
-ifeq ($(ENV), arduino)
+# Modified for Eclipse Arduino Sloeber Version
+ifeq ($(ENV), sloeber)
+TOOLROOT = ../../../../../arduinoPlugin/tools/arduino/avr-gcc/4.8.1-arduino5/bin
+GCCROOT = $(TOOLROOT)/
+AVRDUDE_CONF = -C$(TOOLROOT)/avr/etc/avrdude.conf
+
+else ifeq ($(ENV), arduino)
 # For Arduino, we assume that we're connected to the optiboot directory
 # included with the arduino distribution, which means that the full set
 # of avr-tools are "right up there" in standard places.
@@ -83,7 +89,7 @@ else
 # Arduino 1.0 (and earlier) tool location
   TOOLROOT = ../../../tools
 endif
-GCCROOT = $(TOOLROOT)/avr/bin/
+
 
 ifeq ($(OS), windows)
 # On windows, SOME of the tool paths will need to have backslashes instead
@@ -297,7 +303,8 @@ atmega328: TARGET = atmega328
 atmega328: MCU_TARGET = atmega328p
 atmega328: CFLAGS += $(COMMON_OPTIONS)
 atmega328: AVR_FREQ ?= 16000000L
-atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7e00 -Wl,--section-start=.version=0x7ffe
+#atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7e00 -Wl,--section-start=.version=0x7ffe
+atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7c00 -Wl,--section-start=.version=0x7ffe
 atmega328: $(PROGRAM)_atmega328.hex
 atmega328: $(PROGRAM)_atmega328.lst
 
@@ -495,7 +502,8 @@ atmega328_pro8_isp: MCU_TARGET = atmega328p
 # 512 byte boot, SPIEN
 atmega328_pro8_isp: HFUSE ?= DE
 # Low power xtal (16MHz) 16KCK/14CK+65ms
-atmega328_pro8_isp: LFUSE ?= FF
+#atmega328_pro8_isp: LFUSE ?= FF
+atmega328_pro8_isp: LFUSE ?= E2
 # 2.7V brownout
 atmega328_pro8_isp: EFUSE ?= 05
 atmega328_pro8_isp: isp
