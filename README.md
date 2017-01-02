@@ -66,6 +66,14 @@ void start_bootoader()
 ```
 The bootloader will start app after a **STK_LEAVE_PROGRAM**
 
+## Device serial number
+
+**SN_MAJOR** and **SN_MINOR** are used to set a serial number for arduino device.
+Serial number is read-only can be inspected with new custom STK codes 0x92 and 0x93.
+Serial number is intended as unsigned int where SN_MAJOR is the MSB and SN_MINOR is the LSB.
+
+i.e. make ENV=sloeber atmega328_pro8 BAUD_RATE=19200 SN_MAJOR=1 SN_MINOR=1 
+
 ----
 
 > Although it has evolved considerably, Optiboot builds on the original work of Jason P. Kyle (stk500boot.c), [Arduino group (bootloader)](http://arduino.cc), [Spiff (1K bootloader)](http://spiffie.org/know/arduino_1k_bootloader/bootloader.shtml), [AVR-Libc group](http://nongnu.org/avr-libc) and [Ladyada (Adaboot)](http://www.ladyada.net/library/arduino/bootloader.html).

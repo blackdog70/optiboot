@@ -231,6 +231,14 @@
 /* 4.1 WestfW: put version number in binary.		  */
 /**********************************************************/
 
+#if !defined(SN_MAJOR)
+#define SN_MAJOR 0
+#endif
+
+#if !defined(SN_MINOR)
+#define SN_MINOR 0
+#endif
+
 #define OPTIBOOT_MAJVER 6
 #define OPTIBOOT_MINVER 2
 
@@ -523,7 +531,7 @@ int main(void) {
 #endif
 #endif
 
-  // Set up watchdog to trigger after 2s
+  // Set up watchdog to trigger after 4s
   watchdogConfig(WATCHDOG_4S);
 
   // RS485 rx=11, tx=12, en=13
@@ -564,6 +572,10 @@ int main(void) {
 	  	putch(optiboot_version & 0xFF);
       } else if (which == STK_SW_MAJOR) {
 	  	putch(optiboot_version >> 8);
+      } else if(which == CSTM_SN_MAJOR) {
+    	  putch(SN_MAJOR);
+      } else if(which == CSTM_SN_MINOR) {
+    	  putch(SN_MINOR);
       } else {
 	  /*
 	   * GET PARAMETER returns a generic 0x03 reply for

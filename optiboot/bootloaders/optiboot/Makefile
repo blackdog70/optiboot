@@ -157,6 +157,20 @@ SIZE           = $(GCCROOT)avr-size
 # appropriate parameters ("-DLED_START_FLASHES=10") to gcc
 #
 
+ifdef SN_MAJOR
+SN_MAJOR_CMD = -DSN_MAJOR=$(SN_MAJOR)
+dummy = FORCE
+else
+SN_MAJOR_CMD = -DSN_MAJOR=0
+endif
+
+ifdef SN_MINOR
+SN_MINOR_CMD = -DSN_MINOR=$(SN_MINOR)
+dummy = FORCE
+else
+SN_MINOR_CMD = -DSN_MINOR=0
+endif
+
 ifdef BAUD_RATE
 BAUD_RATE_CMD = -DBAUD_RATE=$(BAUD_RATE)
 dummy = FORCE
@@ -198,6 +212,7 @@ endif
 
 COMMON_OPTIONS = $(BAUD_RATE_CMD) $(LED_START_FLASHES_CMD) $(BIGBOOT_CMD)
 COMMON_OPTIONS += $(SOFT_UART_CMD) $(LED_DATA_FLASH_CMD) $(LED_CMD) $(SS_CMD)
+COMMON_OPTIONS += $(SN_MAJOR_CMD) $(SN_MINOR_CMD)
 
 #UART is handled separately and only passed for devices with more than one.
 ifdef UART

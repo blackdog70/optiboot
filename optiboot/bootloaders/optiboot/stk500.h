@@ -44,3 +44,5 @@
 #define STK_READ_OSCCAL_EXT 0x78  // 'x'
 #define STK_SW_MAJOR        0x81  // ' '
 #define STK_SW_MINOR        0x82  // ' '
+#define CSTM_SN_MAJOR		0x92  // Added by Sebastiano: HIGH BYTE for serial number
+#define CSTM_SN_MINOR		0x93  // Added by Sebastiano: LOW BYTE for serial number
