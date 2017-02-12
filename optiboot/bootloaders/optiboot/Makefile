@@ -72,7 +72,11 @@ SH := bash
 
 # Modified for Eclipse Arduino Sloeber Version
 ifeq ($(ENV), sloeber)
-TOOLROOT = ../../../../../arduinoPlugin/tools/arduino/avr-gcc/4.8.1-arduino5/bin
+BASEDIR = /home/sebastiano/Programs/sloeber
+#TOOLROOT = $(BASEDIR)/avr-gcc/4.9.2-atmel3.5.3-arduino2/bin
+#GCCROOT = $(TOOLROOT)/
+#AVRDUDE_CONF = -C$(BASEDIR)/avrdude/6.3.0-arduino8/etc/etc/avrdude.conf
+TOOLROOT = $(BASEDIR)/arduinoPlugin/packages/arduino/tools/avr-gcc/4.8.1-arduino5/bin
 GCCROOT = $(TOOLROOT)/
 AVRDUDE_CONF = -C$(TOOLROOT)/avr/etc/avrdude.conf
 
@@ -319,7 +323,7 @@ atmega328: MCU_TARGET = atmega328p
 atmega328: CFLAGS += $(COMMON_OPTIONS)
 atmega328: AVR_FREQ ?= 16000000L
 #atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7e00 -Wl,--section-start=.version=0x7ffe
-atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7c00 -Wl,--section-start=.version=0x7ffe
+atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7c00 -Wl,--section-start=.version=0x7ffb
 atmega328: $(PROGRAM)_atmega328.hex
 atmega328: $(PROGRAM)_atmega328.lst
 

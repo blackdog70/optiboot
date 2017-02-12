@@ -239,6 +239,9 @@
 #define SN_MINOR 0
 #endif
 
+unsigned const int __attribute__((section(".version")))
+serial_number = 256*(SN_MAJOR) + SN_MINOR;
+
 #define OPTIBOOT_MAJVER 6
 #define OPTIBOOT_MINVER 2
 
@@ -374,6 +377,7 @@ uint8_t __attribute__((noinline)) getch(void);
 void __attribute__((noinline)) verifySpace();
 void __attribute__((noinline)) watchdogConfig(uint8_t x);
 
+static inline void putNch(char*, uint8_t);
 static inline void getNch(uint8_t);
 #if LED_START_FLASHES > 0
 static inline void flash_led(uint8_t);
@@ -459,6 +463,9 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 #endif // VIRTUAL_BOOT_PARTITION
 
 uint8_t  EEMEM NonVolatileChar;
+#define DDR485 DDRD
+#define PORT485 PORTD
+#define PIN485 PIND2
 
 /* main program starts here */
 int main(void) {
@@ -535,7 +542,8 @@ int main(void) {
   watchdogConfig(WATCHDOG_4S);
 
   // RS485 rx=11, tx=12, en=13
-  DDRB |= _BV(PINB1); // en OUTPUT
+  DDR485 |= _BV(PIN485); // en as OUTPUT
+//  DDRD |= _BV(PIND0); // Pull up resistor on RXD
 
 #if (LED_START_FLASHES > 0) || defined(LED_DATA_FLASH)
   /* Set LED pin as output */
@@ -551,12 +559,12 @@ int main(void) {
   /* Flash onboard LED to signal entering of bootloader */
   flash_led(LED_START_FLASHES * 2);
 #endif
-
+  //putNch("Ready", 5);
   /* Forever loop: exits by causing WDT reset */
   for (;;) {
 	// put RS485 enable low
 	_delay_ms(2);
-	PORTB &= ~_BV(PINB1);
+	PORT485 &= ~_BV(PIN485);
 	_delay_ms(1);
 
     /* get character from UART */
@@ -573,9 +581,11 @@ int main(void) {
       } else if (which == STK_SW_MAJOR) {
 	  	putch(optiboot_version >> 8);
       } else if(which == CSTM_SN_MAJOR) {
-    	  putch(SN_MAJOR);
+    	  putch(serial_number >> 8);
+//    	  putch(SN_MAJOR);
       } else if(which == CSTM_SN_MINOR) {
-    	  putch(SN_MINOR);
+    	  putch(serial_number & 0xFF);
+//    	  putch(SN_MINOR);
       } else {
 	  /*
 	   * GET PARAMETER returns a generic 0x03 reply for
@@ -723,6 +733,12 @@ int main(void) {
   }
 }
 
+static inline void putNch(char *s, uint8_t len) {
+	do {
+		putch(*s++);
+	} while(len--);
+}
+
 void putch(char ch) {
 #ifndef SOFT_UART
   while (!(UART_SRA & _BV(UDRE0)));
@@ -851,7 +867,7 @@ void verifySpace() {
   }
   _delay_ms(10);
   // put RS485 enable high
-  PORTB |= _BV(PINB1);
+  PORT485 |= _BV(PIN485);
   _delay_ms(1);
   putch(STK_INSYNC);
 }
