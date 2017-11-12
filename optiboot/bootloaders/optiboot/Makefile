@@ -59,7 +59,8 @@ export
 
 # defaults
 MCU_TARGET = atmega168
-LDSECTIONS  = -Wl,--section-start=.text=0x3e00 -Wl,--section-start=.version=0x3ffe
+#LDSECTIONS  = -Wl,--section-start=.text=0x3e00 -Wl,--section-start=.version=0x3ffe
+LDSECTIONS  = -Wl,--section-start=.text=0x3dc0 -Wl,--section-start=.version=0x3ffc
 
 # Build environments
 # Start of some ugly makefile-isms to allow optiboot to be built
@@ -297,7 +298,8 @@ virboot328_isp: isp
 atmega168: TARGET = atmega168
 atmega168: MCU_TARGET = atmega168
 atmega168: CFLAGS += $(COMMON_OPTIONS)
-atmega168: AVR_FREQ ?= 16000000L 
+#atmega168: AVR_FREQ ?= 16000000L 
+atmega168: AVR_FREQ ?= 8000000L 
 atmega168: $(PROGRAM)_atmega168.hex
 atmega168: $(PROGRAM)_atmega168.lst
 
