@@ -231,6 +231,8 @@
 /* 4.1 WestfW: put version number in binary.		  */
 /**********************************************************/
 
+unsigned const int __attribute__((section(".version")))
+
 #if !defined(SN_MAJOR)
 #define SN_MAJOR 0
 #endif
@@ -239,7 +241,6 @@
 #define SN_MINOR 0
 #endif
 
-unsigned const int __attribute__((section(".version")))
 serial_number = 256*(SN_MAJOR) + SN_MINOR;
 
 #define OPTIBOOT_MAJVER 6
@@ -255,7 +256,7 @@ serial_number = 256*(SN_MAJOR) + SN_MINOR;
 #define OPTIBOOT_CUSTOMVER 1
 #endif
 
-unsigned const int __attribute__((section(".version"))) 
+//unsigned const int __attribute__((section(".version")))
 optiboot_version = 256*(OPTIBOOT_MAJVER + OPTIBOOT_CUSTOMVER) + OPTIBOOT_MINVER;
 
 #include <inttypes.h>
@@ -466,6 +467,7 @@ uint8_t  EEMEM NonVolatileChar;
 #define DDR485 DDRD
 #define PORT485 PORTD
 #define PIN485 PIND2
+#define START_APP 1
 
 /* main program starts here */
 int main(void) {
@@ -508,16 +510,9 @@ int main(void) {
   MCUCSR = 0;
 #endif
 
-  /*
-   * Sebastiano 01/01/2017
-   * Check if flash  byte at address 0 is set to exactly 1, in case and
-   * if no hard/soft reset the app will start.
-   * Otherwise will start the bootloader.
-   */
-  uint8_t start_app = eeprom_read_byte(&NonVolatileChar);
-  if ((start_app==1) && (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF)))) {
-      appStart(ch);
-  }
+if (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF))) {
+    appStart(ch);
+}
 
 #if LED_START_FLASHES > 0
   // Set up Timer 1 for timeout counter
@@ -542,8 +537,12 @@ int main(void) {
   watchdogConfig(WATCHDOG_4S);
 
   // RS485 rx=11, tx=12, en=13
-  DDR485 |= _BV(PIN485); // en as OUTPUT
-//  DDRD |= _BV(PIND0); // Pull up resistor on RXD
+  // en as OUTPUT
+  DDR485 |= _BV(PIN485);
+  // put RS485 enable low to RECEIVE
+  PORT485 &= ~_BV(PIN485);
+  // Pull up resistor on RXD
+//  DDRD |= _BV(PIND0);
 
 #if (LED_START_FLASHES > 0) || defined(LED_DATA_FLASH)
   /* Set LED pin as output */
@@ -559,14 +558,9 @@ int main(void) {
   /* Flash onboard LED to signal entering of bootloader */
   flash_led(LED_START_FLASHES * 2);
 #endif
-  //putNch("Ready", 5);
+
   /* Forever loop: exits by causing WDT reset */
   for (;;) {
-	// put RS485 enable low
-	_delay_ms(2);
-	PORT485 &= ~_BV(PIN485);
-	_delay_ms(1);
-
     /* get character from UART */
     ch = getch();
     if(ch == STK_GET_PARAMETER) {
@@ -582,10 +576,8 @@ int main(void) {
 	  	putch(optiboot_version >> 8);
       } else if(which == CSTM_SN_MAJOR) {
     	  putch(serial_number >> 8);
-//    	  putch(SN_MAJOR);
       } else if(which == CSTM_SN_MINOR) {
     	  putch(serial_number & 0xFF);
-//    	  putch(SN_MINOR);
       } else {
 	  /*
 	   * GET PARAMETER returns a generic 0x03 reply for
@@ -596,11 +588,11 @@ int main(void) {
     }
     else if(ch == STK_SET_DEVICE) {
       // SET DEVICE is ignored
-      getNch(20);
+      getNch(19);
     }
     else if(ch == STK_SET_DEVICE_EXT) {
       // SET DEVICE EXT is ignored
-      getNch(5);
+      getNch(4);
     }
     else if(ch == STK_LOAD_ADDRESS) {
       // LOAD ADDRESS
@@ -718,9 +710,6 @@ int main(void) {
       putch(SIGNATURE_2);
     }
     else if (ch == STK_LEAVE_PROGMODE) { /* 'Q' */
-	  // * Sebastiano 01/01/2017: Set start app if programmed ok
-	  eeprom_write_byte (&NonVolatileChar, 1);
-
       // Adaboot no-wait mod
       watchdogConfig(WATCHDOG_16MS);
       verifySpace();
@@ -741,9 +730,24 @@ static inline void putNch(char *s, uint8_t len) {
 
 void putch(char ch) {
 #ifndef SOFT_UART
-  while (!(UART_SRA & _BV(UDRE0)));
+  uint8_t x;
+  do {
+	x = UART_SRA;
+  } while (!(x & _BV(UDRE0)));
+  // clear transmitted flag
+  x |= _BV(TXC0);
+  UART_SRA = x;
+  // put transceiver to output mode
+  PORT485 |= _BV(PIN485);
+  // put char
   UART_UDR = ch;
+  // wait for char transmitted
+  while (!(UART_SRA & _BV(TXC0)));
+  // put transceiver to input mode
+  PORT485 &= ~_BV(PIN485);
 #else
+  // put transceiver to output mode
+  RS485_PORT |= _BV(RS485);
   __asm__ __volatile__ (
     "   com %[ch]\n" // ones complement, carry set
     "   sec\n"
@@ -766,6 +770,8 @@ void putch(char ch) {
     :
       "r25"
   );
+  // put transceiver to input mode
+  PORT485 &= ~_BV(PIN485);
 #endif
 }
 
@@ -865,10 +871,6 @@ void verifySpace() {
     while (1)			      // and busy-loop so that WD causes
       ;				      //  a reset and app start.
   }
-  _delay_ms(10);
-  // put RS485 enable high
-  PORT485 |= _BV(PIN485);
-  _delay_ms(1);
   putch(STK_INSYNC);
 }
 
