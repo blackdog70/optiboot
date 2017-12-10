@@ -231,8 +231,6 @@
 /* 4.1 WestfW: put version number in binary.		  */
 /**********************************************************/
 
-unsigned const int __attribute__((section(".version")))
-
 #if !defined(SN_MAJOR)
 #define SN_MAJOR 0
 #endif
@@ -240,8 +238,6 @@ unsigned const int __attribute__((section(".version")))
 #if !defined(SN_MINOR)
 #define SN_MINOR 0
 #endif
-
-serial_number = 256*(SN_MAJOR) + SN_MINOR;
 
 #define OPTIBOOT_MAJVER 6
 #define OPTIBOOT_MINVER 2
@@ -256,8 +252,9 @@ serial_number = 256*(SN_MAJOR) + SN_MINOR;
 #define OPTIBOOT_CUSTOMVER 1
 #endif
 
-//unsigned const int __attribute__((section(".version")))
-optiboot_version = 256*(OPTIBOOT_MAJVER + OPTIBOOT_CUSTOMVER) + OPTIBOOT_MINVER;
+unsigned const int serial_number __attribute__((section(".version"))) = 256*(SN_MAJOR) + SN_MINOR;
+
+unsigned const int optiboot_version __attribute__((section(".version"))) = 256*(OPTIBOOT_MAJVER + OPTIBOOT_CUSTOMVER) + OPTIBOOT_MINVER;
 
 #include <inttypes.h>
 #include <avr/io.h>
