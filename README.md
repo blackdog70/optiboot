@@ -69,7 +69,7 @@ The bootloader will start app after a **STK_LEAVE_PROGRAM**
 ## Device serial number
 
 **SN_MAJOR** and **SN_MINOR** are used to set a serial number for arduino device.
-Serial number is read-only can be inspected with new custom STK codes 0x92 and 0x93.
+Serial number is stored in EEPROM and can be inspected with new custom STK codes 0x92 and 0x93.
 Serial number is intended as unsigned int where SN_MAJOR is the MSB and SN_MINOR is the LSB.
 
 i.e. make ENV=sloeber atmega328_pro8 BAUD_RATE=19200 SN_MAJOR=1 SN_MINOR=1 
