@@ -240,7 +240,7 @@
 #endif
 
 #define OPTIBOOT_MAJVER 6
-#define OPTIBOOT_MINVER 2
+#define OPTIBOOT_MINVER 3
 
 /*
  * OPTIBOOT_CUSTOMVER should be defined (by the makefile) for custom edits
@@ -252,7 +252,8 @@
 #define OPTIBOOT_CUSTOMVER 1
 #endif
 
-unsigned const int serial_number __attribute__((section(".version"))) = 256*(SN_MAJOR) + SN_MINOR;
+// unsigned const int serial_number __attribute__((section(".version"))) = 256*(SN_MAJOR) + SN_MINOR;
+unsigned const int serial_number;
 
 unsigned const int optiboot_version __attribute__((section(".version"))) = 256*(OPTIBOOT_MAJVER + OPTIBOOT_CUSTOMVER) + OPTIBOOT_MINVER;
 
@@ -465,9 +466,13 @@ uint8_t  EEMEM NonVolatileChar;
 #define PORT485 PORTD
 #define PIN485 PIND2
 #define START_APP 1
+#define ADDRESS_SN_NUMBER 0x198
 
 /* main program starts here */
 int main(void) {
+#if defined(CALIBRATION)
+	OSCCAL = CALIBRATION;
+#endif
   uint8_t ch;
 
   /*
@@ -530,6 +535,11 @@ if (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF))) {
 #endif
 #endif
 
+  // Check EEPROM for serial number
+  if(eeprom_read_word((uint16_t*)ADDRESS_SN_NUMBER)==0xFFFF) {
+	eeprom_write_word((uint16_t*)ADDRESS_SN_NUMBER, 256*(SN_MAJOR) + SN_MINOR);
+  }
+
   // Set up watchdog to trigger after 4s
   watchdogConfig(WATCHDOG_4S);
 
@@ -572,9 +582,11 @@ if (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF))) {
       } else if (which == STK_SW_MAJOR) {
 	  	putch(optiboot_version >> 8);
       } else if(which == CSTM_SN_MAJOR) {
-    	  putch(serial_number >> 8);
+    	  // putch(serial_number >> 8);
+    	  putch(eeprom_read_byte((uint8_t*)ADDRESS_SN_NUMBER+1));
       } else if(which == CSTM_SN_MINOR) {
-    	  putch(serial_number & 0xFF);
+    	  // putch(serial_number & 0xFF);
+    	  putch(eeprom_read_byte((uint8_t*)ADDRESS_SN_NUMBER));
       } else {
 	  /*
 	   * GET PARAMETER returns a generic 0x03 reply for

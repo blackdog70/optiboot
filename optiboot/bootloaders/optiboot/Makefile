@@ -60,7 +60,8 @@ export
 # defaults
 MCU_TARGET = atmega168
 #LDSECTIONS  = -Wl,--section-start=.text=0x3e00 -Wl,--section-start=.version=0x3ffe
-LDSECTIONS  = -Wl,--section-start=.text=0x3e00 -Wl,--section-start=.version=0x3ffc
+#LDSECTIONS  = -Wl,--section-start=.text=0x3e00 -Wl,--section-start=.version=0x3ffc
+LDSECTIONS  = -Wl,--section-start=.text=0x3d8e -Wl,--section-start=.version=0x3ffe
 
 # Build environments
 # Start of some ugly makefile-isms to allow optiboot to be built
@@ -77,7 +78,8 @@ BASEDIR = /home/sebastiano/Programs/sloeber
 #TOOLROOT = $(BASEDIR)/avr-gcc/4.9.2-atmel3.5.3-arduino2/bin
 #GCCROOT = $(TOOLROOT)/
 #AVRDUDE_CONF = -C$(BASEDIR)/avrdude/6.3.0-arduino8/etc/etc/avrdude.conf
-TOOLROOT = $(BASEDIR)/arduinoPlugin/packages/arduino/tools/avr-gcc/4.8.1-arduino5/bin
+#TOOLROOT = $(BASEDIR)/arduinoPlugin/packages/arduino/tools/avr-gcc/4.8.1-arduino5/bin
+TOOLROOT = $(BASEDIR)/arduinoPlugin/packages/arduino/tools/avr-gcc/5.4.0-atmel3.6.1-arduino2/bin
 GCCROOT = $(TOOLROOT)/
 AVRDUDE_CONF = -C$(TOOLROOT)/avr/etc/avrdude.conf
 
@@ -148,7 +150,8 @@ CC         = $(GCCROOT)avr-gcc
 # Override is only needed by avr-lib build system.
 
 override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) -DF_CPU=$(AVR_FREQ) $(DEFS)
-override LDFLAGS       = $(LDSECTIONS) -Wl,--relax -nostartfiles -nostdlib
+#override LDFLAGS       = $(LDSECTIONS) -Wl,--relax -nostartfiles -nostdlib
+override LDFLAGS       = $(LDSECTIONS) -Wl,--relax -nostartfiles
 #-Wl,--gc-sections
 
 OBJCOPY        = $(GCCROOT)avr-objcopy
@@ -161,6 +164,12 @@ SIZE           = $(GCCROOT)avr-size
 # Permit commands like "make atmega328 LED_START_FLASHES=10" to pass the
 # appropriate parameters ("-DLED_START_FLASHES=10") to gcc
 #
+
+ifdef CALIBRATION
+CALIBRATION_CMD = -DCALIBRATION=$(CALIBRATION)
+else
+CALIBRATION_CMD = -DCALIBRATION=0
+endif
 
 ifdef SN_MAJOR
 SN_MAJOR_CMD = -DSN_MAJOR=$(SN_MAJOR)
@@ -217,7 +226,7 @@ endif
 
 COMMON_OPTIONS = $(BAUD_RATE_CMD) $(LED_START_FLASHES_CMD) $(BIGBOOT_CMD)
 COMMON_OPTIONS += $(SOFT_UART_CMD) $(LED_DATA_FLASH_CMD) $(LED_CMD) $(SS_CMD)
-COMMON_OPTIONS += $(SN_MAJOR_CMD) $(SN_MINOR_CMD)
+COMMON_OPTIONS += $(SN_MAJOR_CMD) $(SN_MINOR_CMD) $(CALIBRATION_CMD)
 
 #UART is handled separately and only passed for devices with more than one.
 ifdef UART
@@ -496,7 +505,8 @@ lilypad_resonator_isp: isp
 pro8: TARGET = pro_8MHz
 pro8: CHIP = atmega168
 pro8:
-	$(MAKE) $(CHIP) AVR_FREQ=8000000L LED_START_FLASHES=3
+#	$(MAKE) $(CHIP) AVR_FREQ=8000000L LED_START_FLASHES=3
+	$(MAKE) $(CHIP) AVR_FREQ=8000000L
 	mv $(PROGRAM)_$(CHIP).hex $(PROGRAM)_$(TARGET).hex
 	mv $(PROGRAM)_$(CHIP).lst $(PROGRAM)_$(TARGET).lst
 
